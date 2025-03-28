@@ -17,9 +17,14 @@ func main() {
 		log.Fatalf("Failed to create client: %v", err)
 	}
 
-	// Create an invoice
+	// Generate a unique idempotency key
+	orderID := "ORDER-12345"
+	idempotencyKey := irembopay.GenerateIdempotencyKey("invoice", orderID)
+	fmt.Printf("Using idempotency key: %s\n", idempotencyKey)
+
+	// Create an invoice with idempotency
 	ctx := context.Background()
-	invoice, err := client.Invoice.Create(ctx, &irembopay.InvoiceRequest{
+	invoiceReq := &irembopay.InvoiceRequest{
 		TransactionID:            "TST-12345",
 		PaymentAccountIdentifier: "TST-RWF",
 		PaymentItems: []irembopay.PaymentItem{
@@ -37,7 +42,9 @@ func main() {
 			Name:        "Test User",
 		},
 		Language: "EN",
-	})
+	}
+
+	invoice, err := client.Invoice.CreateWithIdempotency(ctx, invoiceReq, idempotencyKey)
 	if err != nil {
 		log.Fatalf("Failed to create invoice: %v", err)
 	}
@@ -45,24 +52,20 @@ func main() {
 	fmt.Printf("Created invoice: %s\n", invoice.InvoiceNumber)
 	fmt.Printf("Payment link: %s\n", invoice.PaymentLinkUrl)
 
-	// Get the invoice details
-	fetchedInvoice, err := client.Invoice.Get(ctx, invoice.InvoiceNumber)
+	// Try to create the same invoice again (should be idempotent)
+	fmt.Println("\nTrying to create the same invoice again...")
+
+	duplicateInvoice, err := client.Invoice.CreateWithIdempotency(ctx, invoiceReq, idempotencyKey)
 	if err != nil {
-		log.Fatalf("Failed to get invoice: %v", err)
+		log.Printf("Error: %v\n", err)
+	} else {
+		fmt.Printf("Received invoice: %s\n", duplicateInvoice.InvoiceNumber)
+
+		// Check if it's the same invoice
+		if duplicateInvoice.InvoiceNumber == invoice.InvoiceNumber {
+			fmt.Println("Success! Received the same invoice (idempotent request worked)")
+		} else {
+			fmt.Println("Warning: Received a different invoice")
+		}
 	}
-
-	fmt.Printf("Fetched invoice: %s\n", fetchedInvoice.InvoiceNumber)
-	fmt.Printf("Status: %s\n", fetchedInvoice.PaymentStatus)
-
-	// Initiate a mobile money payment
-	momoPayment, err := client.Payment.InitiateMomoPayment(ctx, &irembopay.MomoPaymentRequest{
-		AccountIdentifier: "0780000001",
-		PaymentProvider:   "MTN",
-		InvoiceNumber:     invoice.InvoiceNumber,
-	})
-	if err != nil {
-		log.Fatalf("Failed to initiate payment: %v", err)
-	}
-
-	fmt.Printf("Initiated payment: %s\n", momoPayment.ReferenceID)
 }

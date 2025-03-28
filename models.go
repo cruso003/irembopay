@@ -2,6 +2,7 @@ package irembopay
 
 import (
 	"encoding/json"
+	"strings"
 	"time"
 )
 
@@ -28,6 +29,7 @@ type InvoiceRequest struct {
 	Description              string        `json:"description,omitempty"`    // Description of the invoice
 	Customer                 *Customer     `json:"customer,omitempty"`       // Customer information
 	Language                 string        `json:"language,omitempty"`       // Language (FR, EN, RW)
+	IdempotencyKey           string        `json:"-"`                        // Unique key to prevent duplicate requests
 }
 
 // BatchInvoiceRequest represents the request to create a batch invoice
@@ -35,6 +37,7 @@ type BatchInvoiceRequest struct {
 	TransactionID  string   `json:"transactionId"`         // Unique transaction identifier
 	InvoiceNumbers []string `json:"invoiceNumbers"`        // List of invoice numbers to include in the batch
 	Description    string   `json:"description,omitempty"` // Description of the batch invoice
+	IdempotencyKey string   `json:"-"`                     // Unique key to prevent duplicate requests
 }
 
 // UpdateInvoiceRequest represents the request to update an invoice
@@ -113,4 +116,12 @@ func FormatTime(t time.Time) string {
 // ParseTime parses a time string from IremboPay API
 func ParseTime(s string) (time.Time, error) {
 	return time.Parse(time.RFC3339, s)
+}
+
+// GenerateIdempotencyKey creates a unique idempotency key
+// The format can be customized based on your needs
+func GenerateIdempotencyKey(prefix string, uniqueElements ...string) string {
+	elements := append([]string{prefix}, uniqueElements...)
+	elements = append(elements, time.Now().Format("20060102150405"))
+	return strings.Join(elements, "_")
 }

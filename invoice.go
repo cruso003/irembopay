@@ -38,6 +38,12 @@ func (s *InvoiceService) Create(ctx context.Context, req *InvoiceRequest) (*Invo
 	return &invoice, nil
 }
 
+// CreateWithIdempotency creates a new invoice with an idempotency key
+func (s *InvoiceService) CreateWithIdempotency(ctx context.Context, req *InvoiceRequest, idempotencyKey string) (*Invoice, error) {
+	req.IdempotencyKey = idempotencyKey
+	return s.Create(ctx, req)
+}
+
 // CreateWithExpiry creates a new invoice with an expiry time
 func (s *InvoiceService) CreateWithExpiry(ctx context.Context, req *InvoiceRequest, expiryDuration time.Duration) (*Invoice, error) {
 	// Calculate expiry time

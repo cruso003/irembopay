@@ -36,3 +36,9 @@ func (s *BatchService) Create(ctx context.Context, req *BatchInvoiceRequest) (*I
 
 	return &invoice, nil
 }
+
+// CreateWithIdempotency creates a new batch invoice with an idempotency key
+func (s *BatchService) CreateWithIdempotency(ctx context.Context, req *BatchInvoiceRequest, idempotencyKey string) (*Invoice, error) {
+	req.IdempotencyKey = idempotencyKey
+	return s.Create(ctx, req)
+}

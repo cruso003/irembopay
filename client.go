@@ -39,6 +39,19 @@ type Request struct {
 func (c *Client) DoRequest(ctx context.Context, req Request, result interface{}) error {
 	var bodyReader io.Reader
 	if req.Body != nil {
+		// Check if the body has an idempotency key
+		if invoiceReq, ok := req.Body.(*InvoiceRequest); ok && invoiceReq.IdempotencyKey != "" {
+			if req.Headers == nil {
+				req.Headers = make(map[string]string)
+			}
+			req.Headers["X-Idempotency-Key"] = invoiceReq.IdempotencyKey
+		} else if batchReq, ok := req.Body.(*BatchInvoiceRequest); ok && batchReq.IdempotencyKey != "" {
+			if req.Headers == nil {
+				req.Headers = make(map[string]string)
+			}
+			req.Headers["X-Idempotency-Key"] = batchReq.IdempotencyKey
+		}
+
 		bodyBytes, err := json.Marshal(req.Body)
 		if err != nil {
 			return fmt.Errorf("error marshaling request body: %w", err)
